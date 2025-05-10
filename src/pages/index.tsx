@@ -12,9 +12,10 @@ import { PointOfInterest, Message } from "@/types";
 import Map from "@/components/Map";
 import StoryCard from "@/components/StoryCard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import translateToFlemish from "@/services/llm/translate";
 import TTSTestButton from "@/components/TTSTestButton";
 import { Input } from "@/components/ui/input";
+import { translateText } from "@/services/helper";
+import { playStory } from "@/services/narrate";
 
 const Index = () => {
   const { toast } = useToast();
@@ -95,6 +96,9 @@ const Index = () => {
         },
       ]);
 
+      // Play the story
+      playStory(storyResponse.story);
+
       setSelectedPOI(storyResponse.nextDestination);
     } catch (error) {
       console.error("Error:", error);
@@ -126,7 +130,7 @@ const Index = () => {
       // Fetch more info about the location from Wikipedia
       const wikipediaInfo = await getWikipediaInfo(selectedPOI);
 
-      const translatedInfo = await translateToFlemish(
+      const translatedInfo = await translateText(
         `You've arrived at ${selectedPOI.name}! ${wikipediaInfo}\n\nWould you like to explore more places nearby?`
       );
 
@@ -138,6 +142,9 @@ const Index = () => {
           content: translatedInfo,
         },
       ]);
+
+      // Play the story
+      playStory(translatedInfo);
 
       // Reset selection to enable exploring again
       setSelectedPOI(null);
