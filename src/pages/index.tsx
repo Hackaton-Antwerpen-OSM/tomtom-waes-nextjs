@@ -1,115 +1,429 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import React, { useState, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { Compass, Locate, Navigation, Car, Send } from "lucide-react";
+import { useLocation } from "@/hooks/useLocation";
+import {
+  getNearbyPointsOfInterest,
+  getWikipediaInfo,
+} from "@/services/openStreetMapService";
+import { generateStory } from "@/services/storyGenerationService";
+import { PointOfInterest, Message } from "@/types";
+import Map from "@/components/Map";
+import StoryCard from "@/components/StoryCard";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import translateToFlemish from "@/services/llm/translate";
+import TTSTestButton from "@/components/TTSTestButton";
+import { Input } from "@/components/ui/input";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const Index = () => {
+  const { toast } = useToast();
+  const { location, error, loading, getCurrentLocation } = useLocation();
+  const [pointsOfInterest, setPointsOfInterest] = useState<PointOfInterest[]>(
+    []
+  );
+  const [selectedPOI, setSelectedPOI] = useState<PointOfInterest | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [fetchingPOIs, setFetchingPOIs] = useState(false);
+  const [generatingStory, setGeneratingStory] = useState(false);
+  const [showDirections, setShowDirections] = useState(false);
+  const [transportMode, setTransportMode] = useState<"car" | "foot">("car");
+  const [inputMessage, setInputMessage] = useState("");
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Geen Locatie",
+        description:
+          "Zet uw locatie aan, manneke, anders kunnen we nie verder!",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
-export default function Home() {
+  // Auto-scroll to bottom when messages update
+  useEffect(() => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages]);
+
+  const handleExploreClick = async () => {
+    if (!location) {
+      toast({
+        title: "Geen Locatie",
+        description:
+          "Zet uw locatie aan, manneke, anders kunnen we nie verder!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setFetchingPOIs(true);
+      const pois = await getNearbyPointsOfInterest(location);
+      setPointsOfInterest(pois);
+
+      if (pois.length === 0) {
+        toast({
+          title: "Geen Interessante Plekjes",
+          description:
+            "Verdoemme toch, hier is niks te doen! Ga maar naar nen andere plek, manneke.",
+        });
+        return;
+      }
+
+      setGeneratingStory(true);
+      const storyResponse = await generateStory(pois, messages);
+
+      // Add user message
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content: "Tell me about interesting places around here.",
+        },
+      ]);
+
+      // Add assistant response with story
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: storyResponse.story,
+        },
+      ]);
+
+      setSelectedPOI(storyResponse.nextDestination);
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        title: "Fok he!",
+        description:
+          "Da is nie gelukt, manneke. Kunnen de interessante plekjes nie vinden.",
+        variant: "destructive",
+      });
+    } finally {
+      setFetchingPOIs(false);
+      setGeneratingStory(false);
+    }
+  };
+
+  const handleArrivalConfirmed = async () => {
+    if (!selectedPOI) return;
+
+    try {
+      // Add user message
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content: `I've arrived at ${selectedPOI.name}.`,
+        },
+      ]);
+
+      // Fetch more info about the location from Wikipedia
+      const wikipediaInfo = await getWikipediaInfo(selectedPOI);
+
+      const translatedInfo = await translateToFlemish(
+        `You've arrived at ${selectedPOI.name}! ${wikipediaInfo}\n\nWould you like to explore more places nearby?`
+      );
+
+      // Add assistant response with location info
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: translatedInfo,
+        },
+      ]);
+
+      // Reset selection to enable exploring again
+      setSelectedPOI(null);
+    } catch (error) {
+      console.error("Error fetching location info:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch information about this location.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleDirections = () => {
+    if (!selectedPOI) {
+      toast({
+        title: "Geen Bestemming Gekozen",
+        description:
+          "Klik eerst op 'Vertel me erover' om nen plek te kiezen, manneke!",
+      });
+      return;
+    }
+
+    setShowDirections((prev) => !prev);
+
+    toast({
+      title: showDirections ? "Route Verborgen" : "Route Getoond",
+      description: showDirections
+        ? "De route is nu weg, manneke."
+        : `Hier hebt ge de ${
+            transportMode === "foot" ? "wandel" : "auto"
+          }route naar ${selectedPOI.name}, manneke!`,
+    });
+  };
+
+  // Handle transport mode change
+  const handleTransportModeChange = (value: string) => {
+    if (value === "car" || value === "foot") {
+      setTransportMode(value);
+
+      if (showDirections && selectedPOI) {
+        toast({
+          title: `${value === "foot" ? "Wandel" : "Autoroute"}`,
+          description: `Nu gaan we ${
+            value === "foot" ? "te voet" : "met de auto"
+          } naar ${selectedPOI.name}, manneke!`,
+        });
+      }
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
+
+    // Add user message
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: inputMessage,
+      },
+    ]);
+
+    // Clear input
+    setInputMessage("");
+
+    try {
+      setGeneratingStory(true);
+      const storyResponse = await generateStory(pointsOfInterest, [
+        ...messages,
+        { role: "user", content: inputMessage },
+      ]);
+
+      // Add assistant response
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: storyResponse.story,
+        },
+      ]);
+
+      setSelectedPOI(storyResponse.nextDestination);
+    } catch (error) {
+      console.error("Error generating response:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate a response. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingStory(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen flex flex-col bg-slate-100">
+      {/* Header */}
+      <header className="bg-black text-white p-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <img src="/logo.png" alt="TomTom Waes" className="w-10 h-10" />
+          <h1 className="text-2xl font-serif">TomTom Waes</h1>
+          <div className="flex gap-2">
+            <TTSTestButton />
+            {selectedPOI && (
+              <Button
+                className={`text-white hover:bg-wanderlust-blue/80 ${
+                  showDirections ? "bg-wanderlust-blue/50" : ""
+                }`}
+                onClick={toggleDirections}
+              >
+                <Navigation className="h-5 w-5" />
+              </Button>
+            )}
+            <Button
+              className="text-white hover:bg-wanderlust-blue/80"
+              onClick={getCurrentLocation}
+              disabled={loading}
+            >
+              <Locate className={`h-5 w-5 ${loading ? "animate-pulse" : ""}`} />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="flex-1 container mx-auto px-4 py-6">
+        {/* Map Section */}
+        <div className="mb-6">
+          <Map
+            userLocation={location}
+            pointsOfInterest={pointsOfInterest}
+            selectedPOI={selectedPOI}
+            showDirections={showDirections}
+            transportMode={transportMode}
+          />
+
+          {showDirections && selectedPOI && (
+            <div className="mt-2 px-3 py-2 bg-wanderlust-blue/10 rounded-md">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-wanderlust-blue">
+                  <span className="font-medium">Directions:</span> Navigate to{" "}
+                  {selectedPOI.name}, {selectedPOI.distance}m away
+                </p>
+                <ToggleGroup
+                  type="single"
+                  value={transportMode}
+                  onValueChange={handleTransportModeChange}
+                  className="bg-white rounded-md"
+                >
+                  <ToggleGroupItem
+                    value="car"
+                    aria-label="Drive"
+                    title="Driving directions"
+                  >
+                    <Car className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="foot"
+                    aria-label="Walk"
+                    title="Walking directions"
+                  >
+                    <Navigation className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Location info */}
+        <div className="mb-6">
+          <div className="bg-white rounded-md shadow-sm p-4">
+            <h2 className="font-serif text-lg text-wanderlust-blue mb-2">
+              Your Location
+            </h2>
+            {location ? (
+              <p className="text-sm text-gray-600">
+                {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600">
+                {loading
+                  ? "We zoeken u op, manneke..."
+                  : "We weten nie waar ge zijt, manneke!"}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Gemini API Key Input */}
+        {/* <GeminiKeyInput /> */}
+
+        {/* Story/conversation section */}
+        <div className="mb-6">
+          {messages.length > 0 ? (
+            <div className="space-y-3">
+              {messages.map((message, index) => (
+                <StoryCard
+                  key={index}
+                  message={message}
+                  isLastMessage={index === messages.length - 1}
+                  onButtonClick={
+                    message.role === "assistant" &&
+                    index === messages.length - 1 &&
+                    selectedPOI
+                      ? handleArrivalConfirmed
+                      : undefined
+                  }
+                  onShowDirections={
+                    message.role === "assistant" &&
+                    index === messages.length - 1 &&
+                    selectedPOI &&
+                    !showDirections
+                      ? toggleDirections
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <h2 className="font-serif text-xl text-wanderlust-blue mb-3">
+                Welkom bij TomTom Waes manneke!
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Ontdek de schone plekjes rond u met uw lokale gids TomTom Waes.
+                <br />
+                Das nogal ne keirel ze!
+              </p>
+              <div className="inline-block animate-pulse-light">
+                <Compass
+                  size={48}
+                  className="text-wanderlust-blue mx-auto mb-4"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* Footer with input and explore button */}
+      <footer className="bg-white p-4 shadow-lg">
+        <div className="container mx-auto space-y-4">
+          {/* Message input */}
+          <div className="flex gap-2">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message..."
+              className="flex-1"
+              disabled={generatingStory}
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || generatingStory}
+              className="bg-wanderlust-blue hover:bg-wanderlust-blue/90 text-white"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Explore button */}
+          <Button
+            className="w-full bg-green-300 hover:bg-green-300/90 text-black font-medium py-6"
+            onClick={handleExploreClick}
+            disabled={!location || fetchingPOIs || generatingStory}
+          >
+            {fetchingPOIs
+              ? "We zoeken schone plekjes..."
+              : generatingStory
+              ? "We maken nen verhaaltje..."
+              : "Ontdek 't stad!"}
+          </Button>
+        </div>
       </footer>
     </div>
   );
-}
+};
+
+export default Index;
