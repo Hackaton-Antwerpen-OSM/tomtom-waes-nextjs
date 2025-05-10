@@ -24,9 +24,13 @@ Sometimes say things like "alee mannekes zulle we nog een pintje pakke" and "ale
 
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash-001",
-      contents: prompt + "\n\n" + text,
+      contents:
+        prompt +
+        "\n\n" +
+        text +
+        "\n\nJust reply in text, do not include markdown.",
     });
-    
+
     return response.text || "";
   } catch (error) {
     console.error("Translation error:", error);

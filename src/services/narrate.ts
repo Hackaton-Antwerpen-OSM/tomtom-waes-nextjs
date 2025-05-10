@@ -1,6 +1,6 @@
 export async function playStory(story: string) {
   console.log("Playing story:", story);
-  return;
+  
   const response = await fetch("/api/tts", {
     method: "POST",
     body: JSON.stringify({
@@ -9,7 +9,7 @@ export async function playStory(story: string) {
         stability: 0.5,
         similarity_boost: 0.75,
         style: 0.8,
-        speed: 0.9,
+        speed: 1.02,
       },
     }),
   });

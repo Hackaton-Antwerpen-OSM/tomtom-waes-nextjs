@@ -33,7 +33,9 @@ export async function generateStory(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({
+        prompt: prompt + "\nJust reply in text, do not include markdown.",
+      }),
     });
 
     console.log("💩 Gemini response", response);
@@ -113,7 +115,11 @@ Example: [4, 7, 12]
     console.log("💩 POI selection: Gemini response", selectionText);
 
     // Extract JSON array from the response
-    const matches = selectionText.match(/\[.*?\]/);
+    const matches = selectionText
+      .trim()
+      .replaceAll("\n", "")
+      .replaceAll(" ", "")
+      .match(/\[.*?\]/);
     if (!matches) {
       throw new Error("Could not parse Gemini response");
     }
