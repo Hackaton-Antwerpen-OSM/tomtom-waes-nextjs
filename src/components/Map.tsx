@@ -1,10 +1,10 @@
-
 import React, { useEffect, useRef } from 'react';
 import { Location, PointOfInterest } from '../types';
 // We'll dynamically import the CSS in the useEffect hook instead
 // of importing it directly at the top level
 
 // Add global type declaration for Leaflet Routing Machine
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
   interface Window { 
     L: typeof import('leaflet') & {
@@ -16,6 +16,8 @@ declare global {
     } 
   }
 }
+
+// Remove all type definitions that are no longer used
 
 interface MapProps {
   userLocation: Location | null;
