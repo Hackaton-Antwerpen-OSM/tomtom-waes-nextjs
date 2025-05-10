@@ -85,7 +85,7 @@ export async function getNearbyPointsOfInterest(
 ): Promise<PointOfInterest[]> {
   // Try with increasing radius until we find something or hit max radius
   const maxRadius = 5000; // 5km max search radius
-  const radiusStep = 900; // Increase by 900m each time
+  const radiusStep = 500; // Increase by 900m each time
 
   let radius = initialRadius;
   let pois: PointOfInterest[] = [];
