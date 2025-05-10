@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Message } from "../types";
-import { Navigation, User, Bot } from "lucide-react";
+import { Navigation, User } from "lucide-react";
 
 interface StoryCardProps {
   message: Message;
@@ -32,18 +32,18 @@ const StoryCard: React.FC<StoryCardProps> = ({
     <div
       className={`flex ${
         isAssistant ? "justify-start" : "justify-end"
-      } mb-4 animate-fade-in`}
+      } mb-4 animate-fade-in text-sm`}
     >
       <div className="flex items-start gap-2 max-w-[85%] md:max-w-[70%]">
         {isAssistant && (
           <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <Bot className="h-5 w-5 text-white" />
+            <img src="/logo.png" alt="TomTom Waes" className="h-8 w-8" />
           </div>
         )}
         <Card
-          className={`${isAssistant ? "bg-white" : "bg-blue-500 text-white"}`}
+          className={`${isAssistant ? "bg-white" : "bg-blue-500 text-white"} border-0`}
         >
-          <CardContent className="p-4">
+          <CardContent className="p-3 border-0">
             <div className="narrative-text">{formatText(message.content)}</div>
 
             {isLastMessage &&
@@ -53,9 +53,9 @@ const StoryCard: React.FC<StoryCardProps> = ({
                   {onButtonClick && (
                     <Button
                       onClick={onButtonClick}
-                      className="bg-green-300 hover:bg-green-300/90 text-white"
+                      className="bg-blue-600 hover:bg-green-300/90 text-white"
                     >
-                      Ik zen daar!
+                      &apos;k zen daar!
                     </Button>
                   )}
                   {onShowDirections && (
@@ -65,7 +65,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
                       className="border-blue-500 text-blue-500 hover:bg-blue-500"
                     >
                       <Navigation className="mr-1 h-4 w-4" />
-                      Show directions
+                      Route
                     </Button>
                   )}
                 </div>
@@ -73,7 +73,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
           </CardContent>
         </Card>
         {!isAssistant && (
-          <div className="w-8 h-8 rounded-full bg-green-300 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
             <User className="h-5 w-5 text-white" />
           </div>
         )}

@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { Compass, Locate, Navigation, Car, Send } from "lucide-react";
+import {
+  Compass,
+  Locate,
+  Navigation,
+  Send,
+  ArrowRight,
+} from "lucide-react";
 import { useLocation } from "@/hooks/useLocation";
 import {
   getNearbyPointsOfInterest,
@@ -82,7 +88,7 @@ const Index = () => {
         ...prev,
         {
           role: "user",
-          content: "Tell me about interesting places around here.",
+          content: "Vertel me ne keer iet over goei plekskes in de gebure",
         },
       ]);
 
@@ -249,10 +255,12 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-100">
       {/* Header */}
-      <header className="bg-black text-white p-4 shadow-md">
+      <header className="bg-slate text-white p-4 ">
         <div className="container mx-auto flex justify-between items-center">
           <img src="/logo.png" alt="TomTom Waes" className="w-10 h-10" />
-          <h1 className="text-2xl font-serif">TomTom Waes</h1>
+
+          {/* Location info */}
+
           <div className="flex gap-2">
             {/* <TTSTestButton /> */}
             {selectedPOI && (
@@ -266,11 +274,25 @@ const Index = () => {
               </Button>
             )}
             <Button
-              className="text-white hover:bg-blue-500"
+              className="text-blue-600 hover:bg-blue-500"
               onClick={getCurrentLocation}
               disabled={loading}
             >
               <Locate className={`h-5 w-5 ${loading ? "animate-pulse" : ""}`} />
+              <div>
+                {location ? (
+                  <p className="text-xs text-gray-600">
+                    {location.latitude.toFixed(2)},{" "}
+                    {location.longitude.toFixed(2)}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-600">
+                    {loading
+                      ? "We zoeken u op, manneke..."
+                      : "We weten nie waar ge zijt, manneke!"}
+                  </p>
+                )}
+              </div>
             </Button>
           </div>
         </div>
@@ -289,11 +311,11 @@ const Index = () => {
           />
 
           {showDirections && selectedPOI && (
-            <div className="mt-2 px-3 py-2 bg-blue-500 rounded-md">
+            <div className="mt-2 px-3 py-2 bg-blue-200 rounded-md">
               <div className="flex justify-between items-center">
-                <p className="text-sm text-blue-500">
-                  <span className="font-medium">Directions:</span> Navigate to{" "}
-                  {selectedPOI.name}, {selectedPOI.distance}m away
+                <p className="text-sm text-blue-500 pr-2">
+                  <span className="font-medium">Route:</span> Ga naar{" "}
+                  {selectedPOI.name}, da&apos;s {selectedPOI.distance}m van hier
                 </p>
                 <ToggleGroup
                   type="single"
@@ -301,13 +323,13 @@ const Index = () => {
                   onValueChange={handleTransportModeChange}
                   className="bg-white rounded-md"
                 >
-                  <ToggleGroupItem
+                  {/* <ToggleGroupItem
                     value="car"
                     aria-label="Drive"
                     title="Driving directions"
                   >
                     <Car className="h-4 w-4" />
-                  </ToggleGroupItem>
+                  </ToggleGroupItem> */}
                   <ToggleGroupItem
                     value="foot"
                     aria-label="Walk"
@@ -321,30 +343,10 @@ const Index = () => {
           )}
         </div>
 
-        {/* Location info */}
-        <div className="mb-6">
-          <div className="bg-white rounded-md shadow-sm p-4">
-            <h2 className="font-serif text-lg text-blue-500 mb-2">
-              Your Location
-            </h2>
-            {location ? (
-              <p className="text-sm text-gray-600">
-                {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-              </p>
-            ) : (
-              <p className="text-sm text-gray-600">
-                {loading
-                  ? "We zoeken u op, manneke..."
-                  : "We weten nie waar ge zijt, manneke!"}
-              </p>
-            )}
-          </div>
-        </div>
-
         {/* Story/conversation section */}
-        <div className="mb-6">
+        <div className="mb-2">
           {messages.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-scroll max-h-[calc(100vh-460px)]">
               {messages.map((message, index) => (
                 <StoryCard
                   key={index}
@@ -370,7 +372,7 @@ const Index = () => {
             </div>
           ) : (
             <div className="text-center py-8">
-              <h2 className="font-serif text-xl text-blue-500 mb-3">
+              <h2 className="font-sans font-bold text-xl text-blue-500 mb-3">
                 Welkom bij TomTom Waes manneke!
               </h2>
               <p className="text-gray-600 mb-6">
@@ -380,6 +382,19 @@ const Index = () => {
               </p>
               <div className="inline-block animate-pulse-light">
                 <Compass size={48} className="text-blue-500 mx-auto mb-4" />
+                {/* Explore button */}
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-600/90 text-white font-medium py-6 shadow-2xl"
+                  onClick={handleExploreClick}
+                  disabled={!location || fetchingPOIs || generatingStory}
+                >
+                  {fetchingPOIs
+                    ? "We zoeken schone plekjes..."
+                    : generatingStory
+                    ? "TomTom maakt een verhaaltje..."
+                    : "Ontdek 't stad!"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           )}
@@ -387,7 +402,7 @@ const Index = () => {
       </main>
 
       {/* Footer with input and explore button */}
-      <footer className="bg-white p-4 shadow-lg">
+      <footer className="bg-slate-100 p-4 shadow-lg">
         <div className="container mx-auto space-y-4">
           {/* Message input */}
           <div className="flex gap-2">
@@ -395,31 +410,18 @@ const Index = () => {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="flex-1"
+              placeholder="Curieus over een plekske? Stel uw vraagske maar!"
+              className="flex-1 text-sm bg-white border-0 shadow-2xl"
               disabled={generatingStory}
             />
             <Button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || generatingStory}
-              className="bg-blue-500 hover:bg-blue-500 text-white"
+              className="bg-blue-500 hover:bg-blue-500 text-white shadow-2xl"
             >
               <Send className="h-4 w-4" />
             </Button>
           </div>
-
-          {/* Explore button */}
-          <Button
-            className="w-full bg-green-300 hover:bg-green-300/90 text-black font-medium py-6"
-            onClick={handleExploreClick}
-            disabled={!location || fetchingPOIs || generatingStory}
-          >
-            {fetchingPOIs
-              ? "We zoeken schone plekjes..."
-              : generatingStory
-              ? "We maken nen verhaaltje..."
-              : "Ontdek 't stad!"}
-          </Button>
         </div>
       </footer>
     </div>
