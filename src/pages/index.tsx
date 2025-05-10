@@ -12,7 +12,6 @@ import { PointOfInterest, Message } from "@/types";
 import Map from "@/components/Map";
 import StoryCard from "@/components/StoryCard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import TTSTestButton from "@/components/TTSTestButton";
 import { Input } from "@/components/ui/input";
 import { translateText } from "@/services/helper";
 import { playStory } from "@/services/narrate";
@@ -255,7 +254,7 @@ const Index = () => {
           <img src="/logo.png" alt="TomTom Waes" className="w-10 h-10" />
           <h1 className="text-2xl font-serif">TomTom Waes</h1>
           <div className="flex gap-2">
-            <TTSTestButton />
+            {/* <TTSTestButton /> */}
             {selectedPOI && (
               <Button
                 className={`text-white hover:bg-blue-500 ${
