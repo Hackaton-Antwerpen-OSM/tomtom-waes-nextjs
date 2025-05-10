@@ -34,16 +34,14 @@ const StoryCard: React.FC<StoryCardProps> = ({
         isAssistant ? "justify-start" : "justify-end"
       } mb-4 animate-fade-in`}
     >
-      <div className="flex items-start gap-2 max-w-[85%] md:max-w-[70%] bg-slate-200">
+      <div className="flex items-start gap-2 max-w-[85%] md:max-w-[70%]">
         {isAssistant && (
-          <div className="w-8 h-8 rounded-full bg-wanderlust-blue flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
             <Bot className="h-5 w-5 text-white" />
           </div>
         )}
         <Card
-          className={`${
-            isAssistant ? "bg-white" : "bg-wanderlust-blue text-white"
-          }`}
+          className={`${isAssistant ? "bg-white" : "bg-blue-500 text-white"}`}
         >
           <CardContent className="p-4">
             <div className="narrative-text">{formatText(message.content)}</div>
@@ -64,7 +62,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
                     <Button
                       onClick={onShowDirections}
                       variant="outline"
-                      className="border-wanderlust-blue text-wanderlust-blue hover:bg-wanderlust-blue/10"
+                      className="border-blue-500 text-blue-500 hover:bg-blue-500"
                     >
                       <Navigation className="mr-1 h-4 w-4" />
                       Show directions

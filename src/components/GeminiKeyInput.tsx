@@ -1,16 +1,22 @@
-
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { InfoIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { InfoIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const GeminiKeyInput = () => {
-  const [apiKey, setApiKey] = useState<string>('');
+  const [apiKey, setApiKey] = useState<string>("");
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const { toast } = useToast();
-  
+
   // Check if we have an API key from environment variables
   useEffect(() => {
     const envApiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -19,7 +25,7 @@ const GeminiKeyInput = () => {
       (window as any).geminiApiKey = envApiKey;
     }
   }, []);
-  
+
   const handleSaveApiKey = () => {
     if (apiKey.trim()) {
       // This is just for temporary usage during development
@@ -27,27 +33,28 @@ const GeminiKeyInput = () => {
       (window as any).geminiApiKey = apiKey.trim();
       toast({
         title: "API Key Saved",
-        description: "Your Gemini API key has been saved temporarily for this session."
+        description:
+          "Your Gemini API key has been saved temporarily for this session.",
       });
       setIsVisible(false);
     } else {
       toast({
         title: "API Key Required",
         description: "Please enter a valid Gemini API key.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
-  
+
   // Check if we have an environment variable API key
   const hasEnvApiKey = Boolean(import.meta.env.VITE_GEMINI_API_KEY);
-  
+
   // If env API key exists and input is not visible, show connected state
   if (!isVisible && hasEnvApiKey) {
     return (
       <div className="mb-4">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="w-full border-dashed border-2 border-green-500/30 text-green-600 bg-green-50"
           onClick={() => setIsVisible(true)}
         >
@@ -57,14 +64,14 @@ const GeminiKeyInput = () => {
       </div>
     );
   }
-  
+
   // If no env API key and not visible, show add button
   if (!isVisible && !hasEnvApiKey) {
     return (
       <div className="mb-4">
-        <Button 
-          variant="outline" 
-          className="w-full border-dashed border-2 border-wanderlust-blue/30 text-wanderlust-blue"
+        <Button
+          variant="outline"
+          className="w-full border-dashed border-2 border-blue-500 text-blue-500"
           onClick={() => setIsVisible(true)}
         >
           <InfoIcon className="mr-2 h-4 w-4" />
@@ -73,24 +80,35 @@ const GeminiKeyInput = () => {
       </div>
     );
   }
-  
+
   return (
     <Card className="mb-4">
       <CardHeader>
         <CardTitle>Connect to Gemini API</CardTitle>
         <CardDescription>
-          Enter your Google Gemini API key to enhance your storytelling experience with AI-powered narratives.
+          Enter your Google Gemini API key to enhance your storytelling
+          experience with AI-powered narratives.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col space-y-2">
           {hasEnvApiKey && (
             <p className="text-sm text-green-600 mb-2">
-              A Gemini API key is already configured in the environment. Any key entered here will override it temporarily.
+              A Gemini API key is already configured in the environment. Any key
+              entered here will override it temporarily.
             </p>
           )}
           <p className="text-sm text-gray-500 mb-2">
-            Get your free API key from the <a href="https://ai.google.dev/tutorials/setup" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google AI Studio</a>.
+            Get your free API key from the{" "}
+            <a
+              href="https://ai.google.dev/tutorials/setup"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              Google AI Studio
+            </a>
+            .
           </p>
           <Input
             value={apiKey}
@@ -105,9 +123,7 @@ const GeminiKeyInput = () => {
         <Button variant="ghost" onClick={() => setIsVisible(false)}>
           Cancel
         </Button>
-        <Button onClick={handleSaveApiKey}>
-          Save API Key
-        </Button>
+        <Button onClick={handleSaveApiKey}>Save API Key</Button>
       </CardFooter>
     </Card>
   );

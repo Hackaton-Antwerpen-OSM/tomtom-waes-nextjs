@@ -258,8 +258,8 @@ const Index = () => {
             <TTSTestButton />
             {selectedPOI && (
               <Button
-                className={`text-white hover:bg-wanderlust-blue/80 ${
-                  showDirections ? "bg-wanderlust-blue/50" : ""
+                className={`text-white hover:bg-blue-500 ${
+                  showDirections ? "bg-blue-500" : ""
                 }`}
                 onClick={toggleDirections}
               >
@@ -267,7 +267,7 @@ const Index = () => {
               </Button>
             )}
             <Button
-              className="text-white hover:bg-wanderlust-blue/80"
+              className="text-white hover:bg-blue-500"
               onClick={getCurrentLocation}
               disabled={loading}
             >
@@ -290,9 +290,9 @@ const Index = () => {
           />
 
           {showDirections && selectedPOI && (
-            <div className="mt-2 px-3 py-2 bg-wanderlust-blue/10 rounded-md">
+            <div className="mt-2 px-3 py-2 bg-blue-500 rounded-md">
               <div className="flex justify-between items-center">
-                <p className="text-sm text-wanderlust-blue">
+                <p className="text-sm text-blue-500">
                   <span className="font-medium">Directions:</span> Navigate to{" "}
                   {selectedPOI.name}, {selectedPOI.distance}m away
                 </p>
@@ -325,7 +325,7 @@ const Index = () => {
         {/* Location info */}
         <div className="mb-6">
           <div className="bg-white rounded-md shadow-sm p-4">
-            <h2 className="font-serif text-lg text-wanderlust-blue mb-2">
+            <h2 className="font-serif text-lg text-blue-500 mb-2">
               Your Location
             </h2>
             {location ? (
@@ -371,7 +371,7 @@ const Index = () => {
             </div>
           ) : (
             <div className="text-center py-8">
-              <h2 className="font-serif text-xl text-wanderlust-blue mb-3">
+              <h2 className="font-serif text-xl text-blue-500 mb-3">
                 Welkom bij TomTom Waes manneke!
               </h2>
               <p className="text-gray-600 mb-6">
@@ -380,10 +380,7 @@ const Index = () => {
                 Das nogal ne keirel ze!
               </p>
               <div className="inline-block animate-pulse-light">
-                <Compass
-                  size={48}
-                  className="text-wanderlust-blue mx-auto mb-4"
-                />
+                <Compass size={48} className="text-blue-500 mx-auto mb-4" />
               </div>
             </div>
           )}
@@ -406,7 +403,7 @@ const Index = () => {
             <Button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || generatingStory}
-              className="bg-wanderlust-blue hover:bg-wanderlust-blue/90 text-white"
+              className="bg-blue-500 hover:bg-blue-500 text-white"
             >
               <Send className="h-4 w-4" />
             </Button>
