@@ -123,7 +123,7 @@ const Index = () => {
         ...prev,
         {
           role: "user",
-          content: `I've arrived at ${selectedPOI.name}.`,
+          content: `Ik zen gearriveerd bij ${selectedPOI.name}.`,
         },
       ]);
 

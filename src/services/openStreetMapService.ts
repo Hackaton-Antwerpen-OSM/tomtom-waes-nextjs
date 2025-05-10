@@ -2,6 +2,33 @@ import { Location, PointOfInterest } from "../types";
 
 const OSM_OVERPASS_API = "https://overpass-api.de/api/interpreter";
 
+// Define interface for OSM elements
+interface OSMElement {
+  id: number;
+  type: string;
+  lat?: number;
+  lon?: number;
+  center?: {
+    lat: number;
+    lon: number;
+  };
+  tags?: {
+    name?: string;
+    operator?: string;
+    shop?: string;
+    tourism?: string;
+    amenity?: string;
+    historic?: string;
+    leisure?: string;
+    natural?: string;
+    man_made?: string;
+    memorial?: string;
+    building?: string;
+    residential?: string;
+    [key: string]: string | undefined;
+  };
+}
+
 // List of types to exclude from results
 const EXCLUDED_TYPES = [
   "traffic_signals",
@@ -22,6 +49,8 @@ const EXCLUDED_TYPES = [
   "bus_stop",
   "restaurant",
   "fast_food",
+  "house",
+  "residential",
 ];
 
 // List of amenities we want to keep (higher value POIs)
@@ -95,19 +124,22 @@ async function fetchPointsOfInterest(
   radius: number
 ): Promise<PointOfInterest[]> {
   try {
-    // Build Overpass QL query to find interesting nodes around the user's location
-    // Fixed syntax issues with the regex operators
+    // Simplified query to avoid syntax errors
     const overpassQuery = `
       [out:json];
       (
+         // Historic elements
          node["historic"](around:${radius}, ${location.latitude}, ${location.longitude});
-  way["historic"](around:${radius}, ${location.latitude}, ${location.longitude});
-  relation["historic"](around:${radius}, ${location.latitude}, ${location.longitude});
-  node["tourism"~"museum|attraction|viewpoint|gallery|zoo"](around:${radius}, ${location.latitude}, ${location.longitude});
-  way["tourism"~"museum|attraction|viewpoint|gallery|zoo"](around:${radius}, ${location.latitude}, ${location.longitude});
-  relation["tourism"~"museum|attraction|viewpoint|gallery|zoo"](around:${radius}, ${location.latitude}, ${location.longitude});
+         way["historic"](around:${radius}, ${location.latitude}, ${location.longitude});
+         relation["historic"](around:${radius}, ${location.latitude}, ${location.longitude});
+         
+         // Tourism elements
+         node["tourism"~"museum|attraction|viewpoint|gallery|zoo"](around:${radius}, ${location.latitude}, ${location.longitude});
+         way["tourism"~"museum|attraction|viewpoint|gallery|zoo"](around:${radius}, ${location.latitude}, ${location.longitude});
+         relation["tourism"~"museum|attraction|viewpoint|gallery|zoo"](around:${radius}, ${location.latitude}, ${location.longitude});
       );
-      out body;
+      // Exclude residential buildings and houses in our filtering code instead
+      out body center;
     `;
 
     const response = await fetch(OSM_OVERPASS_API, {
@@ -129,49 +161,77 @@ async function fetchPointsOfInterest(
     console.log("💩 OSM data", data);
 
     // Transform OSM data to our PointOfInterest format
-    const pois: PointOfInterest[] = data.elements.map((element: any) => {
-      // Calculate distance from current location to the POI
-      const distance = calculateDistance(
-        location.latitude,
-        location.longitude,
-        element.lat,
-        element.lon
-      );
+    const pois: PointOfInterest[] = data.elements
+      .map((element: OSMElement) => {
+        // Get coordinates based on element type
+        // Nodes have direct lat/lon, ways and relations have center.lat/center.lon
+        const lat = element.lat || (element.center && element.center.lat);
+        const lon = element.lon || (element.center && element.center.lon);
 
-      // Determine POI type based on OSM tags
-      let poiType = "unknown";
-      if (element.tags) {
-        if (element.tags.shop) poiType = element.tags.shop;
-        else if (element.tags.tourism) poiType = element.tags.tourism;
-        else if (element.tags.amenity) poiType = element.tags.amenity;
-        else if (element.tags.historic) poiType = element.tags.historic;
-        else if (element.tags.leisure) poiType = element.tags.leisure;
-        else if (element.tags.natural) poiType = element.tags.natural;
-        else if (element.tags.man_made) poiType = element.tags.man_made;
-        else if (element.tags.memorial) poiType = element.tags.memorial;
-      }
+        // Skip elements without coordinates
+        if (!lat || !lon) {
+          console.warn(`Element ${element.id} has no coordinates, skipping`);
+          return null;
+        }
 
-      return {
-        id: element.id.toString(),
-        name:
-          element.tags?.name ||
-          element.tags?.operator ||
-          `${poiType} at ${Math.round(distance)}m`,
-        type: poiType,
-        latitude: element.lat,
-        longitude: element.lon,
-        distance: Math.round(distance),
-      };
-    });
+        // Calculate distance from current location to the POI
+        const distance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          lat,
+          lon
+        );
+
+        // Determine POI type based on OSM tags
+        let poiType = "unknown";
+        if (element.tags) {
+          if (element.tags.shop) poiType = element.tags.shop;
+          else if (element.tags.tourism) poiType = element.tags.tourism;
+          else if (element.tags.amenity) poiType = element.tags.amenity;
+          else if (element.tags.historic) poiType = element.tags.historic;
+          else if (element.tags.leisure) poiType = element.tags.leisure;
+          else if (element.tags.natural) poiType = element.tags.natural;
+          else if (element.tags.man_made) poiType = element.tags.man_made;
+          else if (element.tags.memorial) poiType = element.tags.memorial;
+        }
+
+        return {
+          id: element.id.toString(),
+          name:
+            element.tags?.name ||
+            element.tags?.operator ||
+            `${poiType} at ${Math.round(distance)}m`,
+          type: poiType,
+          latitude: lat,
+          longitude: lon,
+          distance: Math.round(distance),
+        };
+      })
+      .filter(Boolean) as PointOfInterest[]; // Filter out null values
 
     // Apply more rigorous filtering
-    return pois
+    const filteredPois = pois
       .filter((poi) => {
         // Must have a name
         if (!poi.name || poi.name.trim() === "") return false;
 
         // Filter out excluded types
         if (EXCLUDED_TYPES.includes(poi.type)) return false;
+
+        // Filter out houses and residential buildings
+        if (poi.type === "house" || poi.type === "residential") return false;
+
+        // Check building tag if available in the original element data
+        const element = data.elements.find(
+          (e: OSMElement) => e.id.toString() === poi.id
+        );
+        if (
+          element?.tags?.building === "house" ||
+          element?.tags?.building === "residential" ||
+          element?.tags?.residential === "yes"
+        ) {
+          return false;
+        }
 
         // If it's an amenity, make sure it's one we want to keep
         if (poi.type === "amenity" && !VALUABLE_AMENITIES.includes(poi.type))
@@ -185,6 +245,8 @@ async function fetchPointsOfInterest(
       })
       .sort((a, b) => (a.distance || 0) - (b.distance || 0))
       .slice(0, 30); // Return more POIs (15 instead of 10) since we're searching a larger area
+
+    return filteredPois;
   } catch (error) {
     console.error("Error fetching POIs:", error);
     throw error;

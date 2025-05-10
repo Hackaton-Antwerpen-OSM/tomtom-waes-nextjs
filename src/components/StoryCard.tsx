@@ -55,7 +55,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
                       onClick={onButtonClick}
                       className="bg-green-300 hover:bg-green-300/90 text-white"
                     >
-                      I've arrived
+                      Ik zen daar!
                     </Button>
                   )}
                   {onShowDirections && (
