@@ -1,8 +1,4 @@
 import { PointOfInterest, Message, StoryResponse } from "../types";
-import { GoogleGenAI } from "@google/genai";
-
-const apiKey = process.env.GEMINI_API_KEY || "";
-const ai = new GoogleGenAI({ apiKey });
 
 /**
  * Generate a story using Google Gemini API
@@ -12,10 +8,13 @@ export async function generateStory(
   previousMessages: Message[] = []
 ): Promise<StoryResponse> {
   try {
-    if (!apiKey) {
-      // Fallback to simulated response if API key is not provided
-      return generateSimulatedStoryResponse(pois, previousMessages);
-    }
+    // if (!apiKey) {
+    //   console.error("No API key found");
+    //   // Fallback to simulated response if API key is not provided
+    //   return generateSimulatedStoryResponse(pois, previousMessages);
+    // }
+
+    console.log("Generating story with Gemini AI: ", pois);
 
     // Select the most interesting POIs using Gemini AI
     const selectedPOIs = await selectInterestingPOIs(pois);
@@ -29,23 +28,28 @@ export async function generateStory(
 
     // Make the API call to Gemini
     console.log("👉👌 prompt: ", prompt);
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-001",
-      contents: prompt,
+    const response = await fetch("/api/llm", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
     });
 
     console.log("💩 Gemini response", response);
 
-    if (!response.text) {
+    if (!response.ok) {
       console.error("Error from Gemini API");
       throw new Error(`Gemini API error: ${response}`);
     }
 
-    const story = response.text;
+    const story = await response.json();
+    const storyText = story.text;
+    console.log("💩 Gemini JSON response", storyText);
 
     return {
       selectedPOIs,
-      story,
+      story: storyText,
       nextDestination,
     };
   } catch (error) {
@@ -62,9 +66,9 @@ export async function generateStory(
 async function selectInterestingPOIs(
   pois: PointOfInterest[]
 ): Promise<PointOfInterest[]> {
-
-  if (!apiKey || pois.length <= 3) {
+  if (pois.length <= 3) {
     // If no API key or not enough POIs, return the first 3 (or fewer)
+    console.log("Not enough POIs, returning the first 3");
     return pois.slice(0, 3);
   }
 
@@ -87,17 +91,26 @@ Format your response as a JSON array with just the indices (1-based) of your sel
 Example: [4, 7, 12]
 `;
 
+    console.log("💩 POI selection: Gemini prompt", prompt);
+
     // Make the API call to Gemini
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-001",
-      contents: prompt,
+    const response = await fetch("/api/llm", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
     });
 
-    if (!response.text) {
+    console.log("💩 POI selection: Gemini response", response);
+
+    if (!response.ok) {
       throw new Error(`Gemini API error: ${response}`);
     }
 
-    const selectionText = await response.text;
+    const responseJson = await response.json();
+    const selectionText = responseJson.text;
+    console.log("💩 POI selection: Gemini response", selectionText);
 
     // Extract JSON array from the response
     const matches = selectionText.match(/\[.*?\]/);
@@ -116,6 +129,8 @@ Example: [4, 7, 12]
       const remainingPOIs = pois.filter((poi) => !selectedPOIs.includes(poi));
       selectedPOIs.push(...remainingPOIs.slice(0, 3 - selectedPOIs.length));
     }
+
+    console.log("💩 POI selection: Selected POIs", selectedPOIs);
 
     return selectedPOIs.slice(0, 3);
   } catch (error) {
@@ -186,11 +201,8 @@ function generateSimulatedStoryResponse(
     // First interaction - introduce the journey
     storyText = `
 ’k Heb wa schone plekjes ontdekt ier in de buurt! Zal ik u ne keer nen avontuur aanraden?
-
 Nie ver van ier, vindt ge ${poiDescriptions}.
-
 Ik zou aanraden om eerst naar ${nextDestination.name} te gaan, da’s maar ${nextDestination.distance} meter van ier. ’t Schijnt nen interessante ${nextDestination.type} te zijn. Laat maar weten as ge der zijt, dan vertel ik u nog wa meer!
-
 Wa denkt ge? Goesting om ernaartoe te gaan?`;
   }
 

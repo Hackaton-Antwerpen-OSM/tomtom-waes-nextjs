@@ -342,9 +342,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Gemini API Key Input */}
-        {/* <GeminiKeyInput /> */}
-
         {/* Story/conversation section */}
         <div className="mb-6">
           {messages.length > 0 ? (

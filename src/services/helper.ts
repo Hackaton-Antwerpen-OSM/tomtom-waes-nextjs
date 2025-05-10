@@ -1,25 +1,5 @@
 import { PointOfInterest, Message } from "@/types";
 
-export async function fetchNearbyPOIs(location: {
-  latitude: number;
-  longitude: number;
-}) {
-  const response = await fetch("/api/poi", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ location }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch points of interest");
-  }
-
-  const data = await response.json();
-  return data.pois as PointOfInterest[];
-}
-
 export async function generateStoryFromAPI(
   pois: PointOfInterest[],
   messages: Message[]
